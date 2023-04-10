@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "netbox-kea-dhcp"
 dynamic = ["version"]
-authors = [{ name="François", email="francoismdj@gmx.fr" },]
+authors = [{ name="francoismdj", email="" },]
 description = "Use netbox as subnets source for ISC Kea DHCP server"
 readme = "README.md"
 requires-python = ">=3.8"
