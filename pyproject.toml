@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "netbox-kea-dhcp"
+dynamic = ["version"]
+authors = [{ name="François", email="francoismdj@gmx.fr" },]
+description = "Use netbox as subnets source for ISC Kea DHCP server"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Systems Administration",
+    "Intended Audience :: Information Technology"
+]
+dependencies = [
+    "pynetbox~=7.0.1",
+    "bottle~=0.12.25",
+    "tomli >= 1.1.0 ; python_version < '3.11'"
+]
+
+[project.urls]
+Homepage = "https://github.com/francoismdj/netbox-kea-dhcp"
+
+[tool.hatch.version]
+path = "netboxkea/__about__.py"
+
+[project.scripts]
+netbox-kea-dhcp = "netboxkea.entry_point:run"

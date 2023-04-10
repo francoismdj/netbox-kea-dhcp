@@ -1,0 +1,46 @@
+# Configuration file is in TOML format (https://toml.io).
+check_only = false
+full_sync_at_startup = false
+# TODO: implement something like "full_sync_schedule = '23h00'"
+
+listen = false
+bind = "0.0.0.0"
+port = 8000
+secret = "azerQSDF1234uiopJKLM7890"
+# This is the default value:
+#secret_header = "X-netbox2kea-Secret"
+
+#log_level = "debug"    # or "info", "warning" (default), "error"
+#ext_log_level = "warning"    # Log level for external modules
+# TODO: syslog = false
+
+netbox_url = "http://10.94.135.32:8000/"
+netbox_token = "9123456789abcdef0123456789abcdef01234568"
+kea_url = "http://10.94.135.209:8000/"
+
+#
+# Netbox-DHCP maps: mapping from netbox custom fields to Kea DHCP attributes
+#
+# Below is the default prefixes’map
+#[prefix_dhcp_map]
+#dhcp_option_data_routers = "option-data.routers"
+#dhcp_option_data_domain_search = "option-data.domain-search"
+#dhcp_option_data_domain_name_servers = "option-data.domain-name-servers"
+#dhcp_next_server = "next-server"
+#dhcp_boot_file_name = "boot-file-name"
+
+#
+# Filters: params injected into netbox API queries
+#
+# See your API documentation on http://netbox/api/docs/.
+# IMPORTANT: non existent params are silently ignored!!
+[prefix_filter]
+status = "active"
+cf_dhcp_enabled = true
+
+[iprange_filter]
+status = "dhcp"    # "dhcp" value is a custom status as of netbox version 3.4.
+
+# Below is the default IP address filter
+#[ipaddress_filter]
+#status = "dhcp"
