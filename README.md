@@ -27,7 +27,7 @@ Key features
 - Only use open source Kea API commands (no ISC paid subscription required).
 - Submit new exported configuration to Kea check before applying it to runtime
   configuration.
-- Query NetBox only for the objects concerned by the event (incremantal
+- Query NetBox only for the objects concerned by the event (incremental
   sync).
 - Get all NetBox data throught the well maintained
   [`pynetbox`](https://github.com/netbox-community/pynetbox) library: unique
@@ -41,7 +41,7 @@ Requirements
 
 Python: >= 3.8 (developped on 3.10 but may works down to 3.7).
 
-Netbox: developped for version 3.4. (TODO: API version ?)
+Netbox: developped for API version 3.4.
 
 ISC Kea DHCP: developped for version 2.2.0.
 
@@ -51,7 +51,7 @@ Install
 To install run `pip install netbox-kea-connector`.
 
 Alternatively you may clone this repo and run
-`python install dist/netbox-kea-connector-VERSION-py3-none-any.whl`.
+`pip install dist/netbox-kea-connector-VERSION-py3-none-any.whl`.
 
 In a virtual environnement:
 ```sh
@@ -146,8 +146,8 @@ Limitations
 -----------
 
 - When a change occured, the whole DHCP configuration is gotten from Kea,
-  modified, and sent back. This a limitation of Kea open source commands. A
-  better update granularity would requires an ISC paid subscription.
+  modified, and sent back. This is a limitation of Kea open source commands. A
+  better update granularity would require an ISC paid subscription.
 - Every event received induces one or more queries to Netbox, even if event
   payload holds the information. This allows to have a unique  point where
   filters are applied and attributes are read.
