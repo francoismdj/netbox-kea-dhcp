@@ -9,6 +9,7 @@ authors = [{ name="francoismdj", email="" },]
 description = "Use netbox as subnets source for ISC Kea DHCP server"
 readme = "README.md"
 requires-python = ">=3.8"
+license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
@@ -29,8 +30,14 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/francoismdj/netbox-kea-dhcp"
 
-[tool.hatch.version]
-path = "netboxkea/__about__.py"
-
 [project.scripts]
 netbox-kea-dhcp = "netboxkea.entry_point:run"
+
+[tool.hatch.version]
+path = "src/netboxkea/__about__.py"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.force-include]
+"examples/" = "examples"

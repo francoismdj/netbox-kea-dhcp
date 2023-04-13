@@ -22,18 +22,18 @@ class FileAPI:
             self.conf = {}
 
     def get_conf(self):
-        return self.conf
+        return self.conf.get('Dhcp4', {})
 
     def raise_conf_error(self, config):
         json.dumps(config)
 
     def set_conf(self, config):
         self.raise_conf_error(config)
-        self.conf = config
+        self.conf['Dhcp4'] = config
 
     def write_conf(self):
         if self.config_file:
-            with open(self.config_file, 'rw') as f:
+            with open(self.config_file, 'w') as f:
                 json.dump(self.conf, f, indent=4)
 
 

@@ -49,7 +49,7 @@ class DHCP4App:
         if url.startswith('http://') or url.startswith('https://'):
             self.api = DHCP4API(url)
         elif url.startswith('file://'):
-            self.api = FileAPI(url.lstrip('file://'))
+            self.api = FileAPI(url.removeprefix('file://'))
         else:
             raise ValueError(
                 'Kea URL must starts either with "http(s)://" or "file://"')

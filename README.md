@@ -48,16 +48,35 @@ ISC Kea DHCP: developped for version 2.2.0.
 Install
 -------
 
-To install run `pip install netbox-kea-connector`.
+### With pip
 
-Alternatively you may clone this repo and run
-`pip install dist/netbox-kea-connector-VERSION-py3-none-any.whl`.
+`netbox-kea-dhcp` is available on
+[PyPi](https://pypi.org/project/netbox-kea-dhcp/) and can be installed
+with `pip install netbox-kea-dhcp`.
 
-In a virtual environnement:
+### With pipx
+
+A convenient way is to use [pipx](https://pypa.github.io/pipx/) to install the
+application in an isolated environnement.
+
+Install `pipx` (below is for Linux, see
+[pipx homepage](https://pypa.github.io/pipx/) for other systems):
+
 ```sh
-python3 -m venv /usr/local/netbox-kea-dhcp
-/usr/local/netbox-kea-dhcp/bin/pip install --upgrade pip
-/usr/local/netbox-kea-dhcp/bin/pip install netbox-kea-dhcp
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+
+Install `netbox-kea-dhcp` from PyPi in a isolated environnement:
+
+```sh
+pipx install netbox-kea-dhcp
+```
+
+Run:
+
+```
+netbox-kea-dhcp --help
 ```
 
 Quick start
@@ -79,22 +98,38 @@ to notify all actions on DHCP-relevant objects:
   * `Virtualization`: `Interface`, `Virtual Machine`.
 - Events: `Creations`, `Updates`, `Deletions`.
 - HTTP Request:
-  * URL: `http://{netbox-connector-host}:{port}/event/{optional-free-text}`
+  * URL: `http://{netbox-connector-host}:{port}/event/{free-text}/`
   * HTTP Method: `POST`.
 
-The field `optional-free-text` permits to define several webhooks with same
-events. The connector only uses it in logs.
+The field `free-text` permits to define several webhooks with same events. The
+connector only uses it in logs.
 
 More help with `netbox-kea-dhcp --help` and in the configuration file example
-under `etc/`.
+under `examples/` (or under
+`~/.local/pipx/venvs/netbox-kea-dhcp/lib/python3.10/site-packages/examples/` if
+app was installed with pipx).
 
 Recommended Netbox webhooks
 ---------------------------
 
-It’s recommended to set several webhooks with conditions, in order to
-filter events and avoid unecessary network and CPU load:
+It’s recommended to set several webhooks with conditions and restricted body
+template, in order to filter events and avoid unecessary network and CPU load:
 
-Event 1:
+Common to all webhooks:
+
+- HTTP Request:
+  * URL: `http://{netbox-connector-host}:{port}/event/{optional-free-text}`
+  * HTTP Method: `POST`.
+- Body template:
+
+    ```json
+    { "event": "{{ event }}",
+      "model": "{{ model }}",
+      "data": { "id": {{ data["id"] }} }
+    }
+    ```
+
+Webhook 1:
 
 - Content types: `IPAM > Prefix`, `IPAM > IP Range`, `IPAM > IP Address`,
   `DCIM > Device`, `DCIM > Interface`, `Virtualization > Virtual Machine`,
@@ -102,7 +137,7 @@ Event 1:
 - Events: `Updates`
 - Conditions: none
 
-Event 2:
+Webhook 2:
 
 - Content types: `IPAM > IP Address`
 - Events: `Creations`, `Deletions`
@@ -119,20 +154,22 @@ Event 2:
     ] }
     ```
 
-Event 3:
+Webhook 3:
 
 - Content types: `IPAM > IP Range`
 - Events: `Creations`, `Deletions`
+- Body template: `{"event": event, "model": model, "data": {"id": data["id"]}}`
 - Conditions (note: you may have to customize status values to add `dhcp`):
 
     ```json
     { "and": [ { "attr": "status.value", "value": "dhcp"} ] }
     ```
 
-Event 4:
+Webhook 4:
 
 - Content types: `IPAM > Prefix`
 - Events: `Creations`, `Deletions`
+- Body template: `{"event": event, "model": model, "data": {"id": data["id"]}}`
 - Conditions: none, or a custom field
 
     ```json
@@ -148,7 +185,7 @@ Limitations
 - When a change occured, the whole DHCP configuration is gotten from Kea,
   modified, and sent back. This is a limitation of Kea open source commands. A
   better update granularity would require an ISC paid subscription.
-- Every event received induces one or more queries to Netbox, even if event
+- Every event received triggers one or more queries to Netbox, even if event
   payload holds the information. This allows to have a unique  point where
   filters are applied and attributes are read.
 - Kea internal subnet `id` keys are not preserved, as they induce conflicts
