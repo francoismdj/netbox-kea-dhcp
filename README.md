@@ -190,3 +190,6 @@ Limitations
   filters are applied and attributes are read.
 - Kea internal subnet `id` keys are not preserved, as they induce conflicts
   when configuration is pushed back to the DHCP server.
+- When Kea URI is of the form `file:///path/to/kea-config`, config is written
+  to the file in an unsafe manner: if the write fails, the file will be
+  inconsistent. This is because the file feature was coded for testing purpose.
