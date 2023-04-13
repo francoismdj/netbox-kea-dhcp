@@ -88,6 +88,7 @@ class Connector:
 
             all_failed = False
 
+        self.kea.auto_commit = True
         if all_failed is not True:
             self.push_to_dhcp()
 
