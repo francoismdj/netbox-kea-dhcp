@@ -1,4 +1,5 @@
 import logging
+from json.decoder import JSONDecodeError
 
 import bottle
 
@@ -19,11 +20,11 @@ class WebhookListener:
     def run(self):
         """ Start web server """
 
-        @bottle.route('/event/<name>', 'POST')
-        def new_event(name=''):
+        @bottle.route('/event/<name>/', 'POST')
+        def new_event(name):
             """ Define an all-in-one route for our web server """
 
-            logger.debug(f'Receive data on /event/{name}')
+            logger.debug(f'Receive data on /event/{name}/')
 
             # import json
             # body = bottle.request.body.getvalue()
@@ -37,9 +38,11 @@ class WebhookListener:
                 self._abort(403, 'wrong secret or secret header')
 
             # Parse JSON body from request
-            body = bottle.request.json
-            if body is None:
-                self._abort(400, 'malformed body (no JSON payload)')
+            try:
+                body = bottle.request.json
+            except JSONDecodeError:
+                body = bottle.request.body.getvalue().decode()
+                self._abort(400, f'malformed body (not JSON):  {body}')
 
             logger.debug(f'Parsed JSON request: {body}')
             try:
