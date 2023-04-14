@@ -5,8 +5,6 @@ from ipaddress import ip_interface, ip_network
 from .api import DHCP4API, FileAPI
 from .exceptions import DuplicateValue, KeaCmdError, SubnetNotFound
 
-logger = logging.getLogger('KeaApp')
-
 # Kea configuration keys
 SUBNETS = 'subnet4'
 USR_CTX = 'user-context'
@@ -84,15 +82,15 @@ class DHCP4App:
         """ Record changes to the configuration. Return True if success """
 
         try:
-            logger.debug('check configuration')
+            logging.debug('check configuration')
             self.api.raise_conf_error(self.conf)
         except KeaCmdError:
             # Drop current working config
-            logger.error('config check failed, drop uncommited changes')
+            logging.error('config check failed, drop uncommited changes')
             self.conf = deepcopy(self.commit_conf)
             raise
         else:
-            logger.debug('commit configuration')
+            logging.debug('commit configuration')
             self.commit_conf = deepcopy(self.conf)
             self._has_commit = True
             return True
@@ -101,19 +99,19 @@ class DHCP4App:
         """ Update DHCP server configuration """
 
         if self._has_commit:
-            logger.info('push configuration to runtime DHCP server')
+            logging.info('push configuration to runtime DHCP server')
             try:
                 self.api.set_conf(self.commit_conf)
-                logger.info('write configuration to permanent file')
+                logging.info('write configuration to permanent file')
                 self.api.write_conf()
             except KeaCmdError as e:
-                logger.error(f'config push or write rejected: {e}')
+                logging.error(f'config push or write rejected: {e}')
 
             self._has_commit = None
             # DHCP server is the true source, get config from it
             self.pull()
         else:
-            logger.debug('no commit to push')
+            logging.debug('no commit to push')
 
     def _check_commit(self, commit=None):
         """ Commit conf if required by argument or instance attribute """
@@ -136,22 +134,22 @@ class DHCP4App:
             elif s['subnet'] == subnet:
                 raise DuplicateValue(f'duplicate subnet {subnet}')
         if found:
-            logger.info(f'subnets > ID {prefix_id}: replace with {subnet}')
+            logging.info(f'subnets > ID {prefix_id}: replace with {subnet}')
             found.clear()
             found.update(new)
         else:
-            logger.info(f'subnets: add {subnet}, ID {prefix_id}')
+            logging.info(f'subnets: add {subnet}, ID {prefix_id}')
             self.conf[SUBNETS].append(new)
 
     @autocommit
     def del_subnet(self, prefix_id, commit=None):
-        logger.info(f'subnets: remove subnet {prefix_id} if it exists')
+        logging.info(f'subnets: remove subnet {prefix_id} if it exists')
         self.conf[SUBNETS] = [
             s for s in self.conf[SUBNETS] if s[USR_CTX][PREFIX] != prefix_id]
 
     @autocommit
     def del_all_subnets(self):
-        logger.info('delete all current subnets')
+        logging.info('delete all current subnets')
         self.conf[SUBNETS].clear()
 
     @autocommit
@@ -166,7 +164,7 @@ class DHCP4App:
 
         for s in self.conf[SUBNETS]:
             if (s[USR_CTX][PREFIX] == prefix_id and s['subnet'] == subnet):
-                logger.info(f'subnet {subnet}: update with {options}')
+                logging.info(f'subnet {subnet}: update with {options}')
                 s.update(options)
                 break
         else:
@@ -230,13 +228,13 @@ class DHCP4App:
                         raise_conflict(i)
 
                 if found:
-                    logger.info(
+                    logging.info(
                         f'subnet {prefix_id} > {item_list} > ID {item_id}: '
                         f'replace with {display}')
                     found.clear()
                     found.update(new)
                 else:
-                    logger.info(
+                    logging.info(
                         f'subnet {prefix_id} > {item_list}: add {display}, '
                         f'ID {item_id}')
                     s[item_list].append(new)
@@ -247,7 +245,7 @@ class DHCP4App:
     def _del_prefix_item(self, item_list, item_key, item_id):
         """ Delete item from all subnets. Silently ignore non-existent item """
 
-        logger.info(f'{item_list}: delete resa {item_id} if it exists')
+        logging.info(f'{item_list}: delete resa {item_id} if it exists')
         for s in self.conf[SUBNETS]:
             s[item_list] = [
                 i for i in s[item_list] if i[USR_CTX][item_key] != item_id]

@@ -4,8 +4,6 @@ import requests
 
 from .exceptions import KeaServerError, KeaCmdError
 
-logger = logging.getLogger('KeaAPI')
-
 
 class FileAPI:
     """ Fake Kea DHCP4 API that keep configuration in memory and file """
@@ -61,7 +59,7 @@ class DHCP4API:
         if result != 0:
             raise KeaCmdError(f'command "{command}" returns "{text}"')
         else:
-            logger.debug(f'command "{command}" OK (text: {text})')
+            logging.debug(f'command "{command}" OK (text: {text})')
             return rj.get('arguments')
 
     def get_conf(self):

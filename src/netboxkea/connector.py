@@ -3,8 +3,6 @@ from ipaddress import ip_interface
 
 from .kea.exceptions import KeaError, KeaClientError, SubnetNotFound
 
-logger = logging.getLogger('Connector')
-
 
 def _map_dhcp_attrs(dhcp_map, netbox_fields):
     """ Convert netbox fields to DHCP configuration dictionary """
@@ -19,7 +17,7 @@ def _map_dhcp_attrs(dhcp_map, netbox_fields):
             # DHCP server attribute represents dot-separated nested attrs
             parts = dhcp_map[k].split('.')
         except KeyError:
-            # self.logger.debug(f'no mapping for netbox DHCP attr {k}')
+            # logging.debug(f'no mapping for netbox DHCP attr {k}')
             continue
         # option-data are in a list of data/name dict
         if parts[0] == 'option-data':
@@ -47,7 +45,7 @@ class Connector:
         self.prefix_dhcp_map = prefix_dhcp_map
 
         # Pull DHCP configuration
-        logger.info('pull config from DHCP server')
+        logging.info('pull config from DHCP server')
         self.kea.pull()
 
     def sync_all(self):
@@ -61,13 +59,13 @@ class Connector:
             if all_failed is None:
                 all_failed = True
             pl = f'prefix {p}: '
-            logger.debug(f'{pl}generate DHCP config')
+            logging.debug(f'{pl}generate DHCP config')
             # Speed up things by disabling auto-commit
             self.kea.auto_commit = False
             try:
                 self._prefix_to_subnet(p, fullsync=True)
             except KeaError as e:
-                logger.error(f'{pl}config failed. Error: {e}')
+                logging.error(f'{pl}config failed. Error: {e}')
                 continue
 
             # Make intermediate commits only when not in check mode to avoid
@@ -76,14 +74,14 @@ class Connector:
                 try:
                     self.kea.commit()
                 except KeaError as e:
-                    logger.error(f'{pl}commit failed. Error: {e}')
+                    logging.error(f'{pl}commit failed. Error: {e}')
                     # Retry with auto-commit enabled to catch the faulty item
-                    logger.warning(f'{pl}retry with auto commit on')
+                    logging.warning(f'{pl}retry with auto commit on')
                     self.kea.auto_commit = True
                     try:
                         self._prefix_to_subnet(p, fullsync=True)
                     except KeaError as e:
-                        logger.error(f'{pl}config failed. Error: {e}')
+                        logging.error(f'{pl}config failed. Error: {e}')
                         continue
 
             all_failed = False
@@ -94,7 +92,7 @@ class Connector:
 
     def push_to_dhcp(self):
         if self.check:
-            logger.info('check mode on: config will NOT be pushed to server')
+            logging.info('check mode on: config will NOT be pushed to server')
         else:
             self.kea.push()
 
@@ -145,13 +143,13 @@ class Connector:
                 try:
                     self._ipaddr_to_resa(i, prefix=pref)
                 except KeaClientError as e:
-                    logger.error(f'prefix {pref} > IP {i}: {e}')
+                    logging.error(f'prefix {pref} > IP {i}: {e}')
             # Add pools
             for r in self.nb.ip_ranges(parent=pref.prefix):
                 try:
                     self._iprange_to_pool(r, prefix=pref)
                 except KeaClientError as e:
-                    logger.error(f'prefix {pref} > range {r}: {e}')
+                    logging.error(f'prefix {pref} > range {r}: {e}')
 
     def _iprange_to_pool(self, iprange, prefix=None):
         prefixes = [prefix] if prefix else self.nb.prefixes(
@@ -164,7 +162,7 @@ class Connector:
                     prefix_id=pref.id, iprange_id=iprange.id, start=start,
                     end=end)
             except SubnetNotFound:
-                logger.warning(
+                logging.warning(
                     f'subnet {pref.prefix} is missing, let’s sync it again')
                 self._prefix_to_subnet(pref, fullsync=True)
 

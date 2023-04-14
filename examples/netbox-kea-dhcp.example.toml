@@ -1,0 +1,59 @@
+# netbox-kea-dhcp configuration file (TOML format, see https://toml.io)
+
+# Check generated configuration but don’t push it to DHCP server
+#check_only = true
+
+# Full sync at application startup (overide current DHCP config)
+#full_sync_at_startup = true
+
+# Listen for NetBox events
+#listen = true
+#bind = "0.0.0.0"
+#port = 8001
+# Require a secret to be sent in Netbox events in HTTP header
+#secret = "CHANGE-ME-CHANGE-ME-CHANGE-ME-CHANGE-ME"
+#secret_header = "X-netbox2kea-secret"
+
+# Netbox URL where API is listening
+netbox_url = "http://10.94.135.32:8000/"
+netbox_token = "9123456789abcdef0123456789abcdef01234568"
+
+# Kea control agent URI
+kea_url = "http://10.94.135.209:8000/"
+
+#log_level = "debug"          # or "info", "warning" (default), "error"
+#ext_log_level = "warning"    # Log level for external modules
+
+# Prefix log messages with syslog level. Intended for systemd unit parameter
+# "SyslogLevelPrefix", as described on
+# https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SyslogLevelPrefix=.
+# Messages are always sent to standard or error outputs.
+# When set to false (default), a datetime and level name prefixes is used
+#syslog_level_prefix = true
+
+#
+# Netbox-DHCP maps: mapping from netbox custom fields to Kea DHCP attributes
+#
+# Default prefixes’map:
+#[prefix_dhcp_map]
+#dhcp_option_data_routers = "option-data.routers"
+#dhcp_option_data_domain_search = "option-data.domain-search"
+#dhcp_option_data_domain_name_servers = "option-data.domain-name-servers"
+#dhcp_next_server = "next-server"
+#dhcp_boot_file_name = "boot-file-name"
+
+#
+# Filters: params injected into netbox API queries to restrict selected objects
+#
+# See API documentation on http://netbox-host/api/docs/.
+# IMPORTANT: non existent params are silently ignored!!
+[prefix_filter]
+status = "active"
+cf_dhcp_enabled = true
+
+[iprange_filter]
+status = "dhcp"    # "dhcp" value is a custom status as of netbox version 3.4
+
+# Default IP address filter:
+#[ipaddress_filter]
+#status = "dhcp"

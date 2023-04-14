@@ -1,0 +1,14 @@
+[Unit]
+Description=Netbox to Kea DHCP connector
+After=isc-kea-dhcp4-server.service
+
+[Service]
+User=_kea
+Group=_kea
+ExecStart=/usr/local/bin/netbox-kea-dhcp -c /etc/netbox-kea-dhcp.toml
+Type=exec
+Restart=on-abnormal
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

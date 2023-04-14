@@ -22,7 +22,7 @@ class Config:
     secret_header: str = 'X-netbox2kea-secret'
     log_level: str = 'warning'
     ext_log_level: str = 'warning'
-    # TODO: syslog: bool = False
+    syslog_level_prefix: bool = False
     kea_url: str = None
     netbox_url: str = None
     netbox_token: str = None

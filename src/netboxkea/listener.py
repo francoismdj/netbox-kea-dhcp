@@ -3,8 +3,6 @@ from json.decoder import JSONDecodeError
 
 import bottle
 
-logger = logging.getLogger('webhook listener')
-
 
 class WebhookListener:
     """ Listen for netbox webhook requests and change DHCP configuration """
@@ -24,7 +22,7 @@ class WebhookListener:
         def new_event(name):
             """ Define an all-in-one route for our web server """
 
-            logger.debug(f'Receive data on /event/{name}/')
+            logging.debug(f'Receive data on /event/{name}/')
 
             # import json
             # body = bottle.request.body.getvalue()
@@ -44,7 +42,7 @@ class WebhookListener:
                 body = bottle.request.body.getvalue().decode()
                 self._abort(400, f'malformed body (not JSON):  {body}')
 
-            logger.debug(f'Parsed JSON request: {body}')
+            logging.debug(f'Parsed JSON request: {body}')
             try:
                 model, id_, event = (
                     body['model'], body['data']['id'], body['event'])
@@ -56,7 +54,7 @@ class WebhookListener:
             except AttributeError:
                 self._abort(400, f'unsupported target "{model}"')
             else:
-                logger.info(f'process event: {model} id={id_} {event}')
+                logging.info(f'process event: {model} id={id_} {event}')
                 sync_func(id_)
 
             bottle.response.status = 201
@@ -68,5 +66,5 @@ class WebhookListener:
         bottle.run(host=self.host, port=self.port)
 
     def _abort(self, code, msg):
-        logger.error(msg)
+        logging.error(msg)
         bottle.abort(code, msg)

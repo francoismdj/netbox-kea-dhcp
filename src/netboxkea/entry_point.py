@@ -4,26 +4,16 @@ from .config import get_config
 from .connector import Connector
 from .kea.app import DHCP4App
 from .listener import WebhookListener
+from .logger import init_logger
 from .netbox import NetboxApp
 
 
 def run():
     conf = get_config()
+    init_logger(conf.log_level, conf.ext_log_level, conf.syslog_level_prefix)
 
-    # Configure logger
-    num_log_level = getattr(logging, conf.log_level.upper(), None)
-    if not isinstance(num_log_level, int):
-        raise ValueError(f'Invalid log level: {conf.log_level}')
-
-    logging.basicConfig(
-        # level=num_log_level, format='[%(levelname)s] %(name)s - %(message)s')
-        level=num_log_level, format='[%(levelname)s] %(message)s')
-    logger = logging.getLogger()
-    # Log level for external modules
-    ext_num_log_level = getattr(logging, conf.ext_log_level.upper(), None)
-    logging.getLogger('urllib3.connectionpool').setLevel(ext_num_log_level)
-
-    logger.info(f'netbox: {conf.netbox_url}, kea: {conf.kea_url}')
+    # Instanciate source, sink and connector
+    logging.info(f'netbox: {conf.netbox_url}, kea: {conf.kea_url}')
     nb = NetboxApp(
         conf.netbox_url, conf.netbox_token, prefix_filter=conf.prefix_filter,
         iprange_filter=conf.iprange_filter,
@@ -32,14 +22,17 @@ def run():
     conn = Connector(
         nb, kea, check=conf.check_only, prefix_dhcp_map=conf.prefix_dhcp_map)
 
+    if not conf.full_sync_at_startup and not conf.listen:
+        logging.warning('Neither full sync nor listen mode has been asked')
+
     # Start a full synchronisation
     if conf.full_sync_at_startup:
-        logger.info('Start full sync')
+        logging.info('Start full sync')
         conn.sync_all()
 
     # Start listening for events
     if conf.listen:
-        logger.info(f'Listen for events on {conf.bind}:{conf.port}')
+        logging.info(f'Listen for events on {conf.bind}:{conf.port}')
         server = WebhookListener(
             connector=conn, host=conf.bind, port=conf.port, secret=conf.secret,
             secret_header=conf.secret_header)
