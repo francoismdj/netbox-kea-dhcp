@@ -101,8 +101,8 @@ to notify all actions on DHCP-relevant objects:
   * URL: `http://{netbox-connector-host}:{port}/event/{free-text}/`
   * HTTP Method: `POST`.
 
-The field `free-text` permits to define several webhooks with same events. The
-connector only uses it in logs.
+The field `free-text` is necessary to define several webhooks with same events.
+The connector only uses it in logs.
 
 More help with `netbox-kea-dhcp --help` and in the configuration file example
 under `examples/` (or under
@@ -118,7 +118,7 @@ template, in order to filter events and avoid unecessary network and CPU load:
 Common to all webhooks:
 
 - HTTP Request:
-  * URL: `http://{netbox-connector-host}:{port}/event/{optional-free-text}`
+  * URL: `http://{netbox-connector-host}:{port}/event/{optional-free-text}/`
   * HTTP Method: `POST`.
 - Body template:
 
