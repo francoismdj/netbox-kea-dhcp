@@ -1,0 +1,18 @@
+server {
+    listen 8443 ssl default_server;
+    server_name _;
+
+    ssl_certificate /etc/ssl/server.pem;
+    ssl_certificate_key /etc/ssl/private/server.key;
+
+    # Note: You should disable gzip for SSL traffic.
+    # See: https://bugs.debian.org/773332
+    gzip off;
+
+    location / {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        include proxy_params;
+    }
+}
