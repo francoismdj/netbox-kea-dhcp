@@ -1,6 +1,8 @@
 netbox-kea-dhcp
 ===============
 
+[![PyPI](https://img.shields.io/pypi/v/netbox-kea-dhcp)](https://pypi.org/project/netbox-kea-dhcp/)
+
 Enable use of [NetBox](https://github.com/netbox-community/netbox) as a subnet
 configuration source for [ISC Kea DHCP server](https://www.isc.org/kea/).
 
