@@ -55,6 +55,8 @@ class WebhookListener:
                 self._abort(400, f'unsupported target "{model}"')
             else:
                 logging.info(f'process event: {model} id={id_} {event}')
+                # Reload DHCP config before applying any changes
+                self.conn.reload_dhcp_config()
                 sync_func(id_)
 
             bottle.response.status = 201

@@ -44,13 +44,10 @@ class Connector:
         self.check = check
         self.prefix_dhcp_map = prefix_dhcp_map
 
-        # Pull DHCP configuration
-        logging.info('pull config from DHCP server')
-        self.kea.pull()
-
     def sync_all(self):
         """ Replace current DHCP configuration by a new generated one """
 
+        self.kea.pull()
         self.kea.del_all_subnets()
 
         # Create DHCP configuration for each prefix
@@ -95,6 +92,9 @@ class Connector:
             logging.info('check mode on: config will NOT be pushed to server')
         else:
             self.kea.push()
+
+    def reload_dhcp_config(self):
+        self.kea.pull()
 
     def sync_prefix(self, id_):
         p = self.nb.prefix(id_)

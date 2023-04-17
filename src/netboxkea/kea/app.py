@@ -15,7 +15,7 @@ IP_RANGE = 'netbox_ip_range_id'
 IP_ADDR = 'netbox_ip_address_id'
 
 
-def autocommit(func):
+def _autocommit(func):
     """ Decoraton to autocommit changes after method execution """
 
     def wrapper(self, *args, **kwargs):
@@ -27,7 +27,7 @@ def autocommit(func):
     return wrapper
 
 
-def boundaries(ip_range):
+def _boundaries(ip_range):
     """ Return a tuple of first and last ip_interface of the pool """
 
     # pool may be expressed by a "-" seperated range or by a network
@@ -55,11 +55,11 @@ class DHCP4App:
         self.commit_conf = None
         self._has_commit = False
         self.auto_commit = True
-        # self.pull()
 
     def pull(self):
         """ Fetch configuration from DHCP server  """
 
+        logging.info('pull running config from DHCP server')
         self.conf = self.api.get_conf()
         # Set minimal expected keys and remove unwanted ones
         self.conf.setdefault(SUBNETS, [])
@@ -108,8 +108,6 @@ class DHCP4App:
                 logging.error(f'config push or write rejected: {e}')
 
             self._has_commit = None
-            # DHCP server is the true source, get config from it
-            self.pull()
         else:
             logging.debug('no commit to push')
 
@@ -119,7 +117,7 @@ class DHCP4App:
         if commit is True or (commit is None and self.auto_commit):
             self.commit()
 
-    @autocommit
+    @_autocommit
     def set_subnet(self, prefix_id, subnet, options={}):
         """ Replace subnet {prefix_id} or append a new one """
 
@@ -141,18 +139,18 @@ class DHCP4App:
             logging.info(f'subnets: add {subnet}, ID {prefix_id}')
             self.conf[SUBNETS].append(new)
 
-    @autocommit
+    @_autocommit
     def del_subnet(self, prefix_id, commit=None):
         logging.info(f'subnets: remove subnet {prefix_id} if it exists')
         self.conf[SUBNETS] = [
             s for s in self.conf[SUBNETS] if s[USR_CTX][PREFIX] != prefix_id]
 
-    @autocommit
+    @_autocommit
     def del_all_subnets(self):
         logging.info('delete all current subnets')
         self.conf[SUBNETS].clear()
 
-    @autocommit
+    @_autocommit
     def set_subnet_options(self, prefix_id, subnet, options):
         """
         Replace options of subnet identified by the pair {prefix_id}/{subnet}.
@@ -170,7 +168,7 @@ class DHCP4App:
         else:
             raise SubnetNotFound(f'key pair id={prefix_id}/subnet="{subnet}"')
 
-    @autocommit
+    @_autocommit
     def set_pool(self, prefix_id, iprange_id, start, end):
         """ Replace pool or append a new one """
 
@@ -181,18 +179,18 @@ class DHCP4App:
         def raise_conflict(p):
             pool = p.get('pool')
             if pool:
-                s, e = boundaries(pool)
+                s, e = _boundaries(pool)
                 if s <= ip_start <= e or s <= ip_end <= e:
                     raise DuplicateValue(f'overlaps existing pool {pool}')
 
         self._set_subnet_item(
             prefix_id, POOLS, IP_RANGE, iprange_id, new, raise_conflict, pool)
 
-    @autocommit
+    @_autocommit
     def del_pool(self, iprange_id):
         self._del_prefix_item(POOLS, IP_RANGE, iprange_id)
 
-    @autocommit
+    @_autocommit
     def set_reservation(self, prefix_id, ipaddr_id, ipaddr, hw_addr, hostname):
         """ Replace host reservation or append a new one """
 
@@ -208,7 +206,7 @@ class DHCP4App:
         self._set_subnet_item(
             prefix_id, RESAS, IP_ADDR, ipaddr_id, new, raise_conflict, hw_addr)
 
-    @autocommit
+    @_autocommit
     def del_resa(self, ipaddr_id):
         self._del_prefix_item(RESAS, IP_ADDR, ipaddr_id)
 
