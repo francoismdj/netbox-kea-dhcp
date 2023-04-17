@@ -177,3 +177,17 @@ class TestConnector(unittest.TestCase):
         self.kea.set_pool(100, 250, '192.168.0.100', '192.168.0.199')
         self.kea.push()
         self.assertEqual(self.srv_conf['Dhcp4'], expected)
+
+    def test_33_set_pool_conflict_overlap(self):
+        self.kea.set_subnet(100, '192.168.0.0/24')
+        self.kea.set_pool(100, 250, '192.168.0.100', '192.168.0.199')
+        with self.assertRaises(KeaClientError):
+            self.kea.set_pool(100, 251, '192.168.0.50', '192.168.0.100')
+        with self.assertRaises(KeaClientError):
+            self.kea.set_pool(100, 251, '192.168.0.199', '192.168.0.250')
+
+    def test_35_del_pool(self):
+        self.kea.set_subnet(100, '192.168.0.0/24')
+        self.kea.set_pool(100, 250, '192.168.0.100', '192.168.0.199')
+        self.kea.del_pool(250)
+        self.assertEqual(len(self.kea.conf['subnet4'][0]['pools']), 0)
