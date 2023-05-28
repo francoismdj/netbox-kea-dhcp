@@ -20,7 +20,8 @@ def run():
         ipaddress_filter=conf.ipaddress_filter)
     kea = DHCP4App(conf.kea_url)
     conn = Connector(
-        nb, kea, check=conf.check_only, prefix_dhcp_map=conf.prefix_dhcp_map)
+        nb, kea, conf.subnet_prefix_map, conf.pool_iprange_map,
+        conf.reservation_ipaddr_map, check=conf.check_only)
 
     if not conf.full_sync_at_startup and not conf.listen:
         logging.warning('Neither full sync nor listen mode has been asked')

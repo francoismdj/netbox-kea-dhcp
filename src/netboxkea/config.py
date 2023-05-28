@@ -29,13 +29,23 @@ class Config:
     prefix_filter: dict = field(default_factory=dict)
     ipaddress_filter: dict = field(default_factory=lambda: {'status': 'dhcp'})
     iprange_filter: dict = field(default_factory=dict)
-    prefix_dhcp_map: dict = field(default_factory=lambda: {
-        'dhcp_option_data_routers': 'option-data.routers',
-        'dhcp_option_data_domain_search': 'option-data.domain-search',
-        'dhcp_option_data_domain_name_servers':
-            'option-data.domain-name-servers',
-        'dhcp_next_server': 'next-server',
-        'dhcp_boot_file_name': 'boot-file-name'})
+    subnet_prefix_map: dict = field(default_factory=lambda: {
+        'option-data.routers': 'custom_fields.dhcp_option_data_routers',
+        'option-data.domain-search':
+            'custom_fields.dhcp_option_data_domain_search',
+        'option-data.domain-name-servers':
+            'custom_fields.dhcp_option_data_domain_name_servers',
+        'next-server': 'custom_fields.dhcp_next_server',
+        'boot-file-name': 'custom_fields.dhcp_boot_file_name'})
+    pool_iprange_map: dict = field(default_factory=lambda: {})
+    reservation_ipaddr_map: dict = field(default_factory=lambda: {
+        # Get MAC address from custom field, fallback to assigned interface
+        'hw-address': ['custom_fields.dhcp_resa_hw_address',
+                       'assigned_object.mac_address'],
+        # Get hostname from DNS name, fallback to device/vm name
+        'hostname': ['dns_name', 'assigned_object.device.name',
+                     'assigned_object.virtual_machine.name']
+        })
 
 
 def get_config():

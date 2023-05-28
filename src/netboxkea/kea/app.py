@@ -118,12 +118,17 @@ class DHCP4App:
             self.commit()
 
     @_autocommit
-    def set_subnet(self, prefix_id, subnet, options={}):
+    def set_subnet(self, prefix_id, subnet_item):
         """ Replace subnet {prefix_id} or append a new one """
 
-        new = options.copy()
-        new.update({'subnet': subnet, USR_CTX: {PREFIX: prefix_id},
-                    RESAS: [], POOLS: []})
+        try:
+            subnet = subnet_item['subnet']
+        except KeyError as e:
+            raise TypeError(f'Missing mandatory subnet key: {e}')
+
+        subnet_item.setdefault(USR_CTX, {})[PREFIX] = prefix_id
+        subnet_item.update({RESAS: [], POOLS: []})
+
         found = None
         for s in self.conf[SUBNETS]:
             if s[USR_CTX][PREFIX] == prefix_id:
@@ -134,10 +139,10 @@ class DHCP4App:
         if found:
             logging.info(f'subnets > ID {prefix_id}: replace with {subnet}')
             found.clear()
-            found.update(new)
+            found.update(subnet_item)
         else:
             logging.info(f'subnets: add {subnet}, ID {prefix_id}')
-            self.conf[SUBNETS].append(new)
+            self.conf[SUBNETS].append(subnet_item)
 
     @_autocommit
     def del_subnet(self, prefix_id, commit=None):
@@ -151,60 +156,73 @@ class DHCP4App:
         self.conf[SUBNETS].clear()
 
     @_autocommit
-    def set_subnet_options(self, prefix_id, subnet, options):
+    def update_subnet(self, prefix_id, subnet_item):
         """
         Replace options of subnet identified by the pair {prefix_id}/{subnet}.
         Raise SubnetNotFound if no subnet matches.
         """
 
-        if 'subnet' in options:
-            raise ValueError('"subnet" key must not be in options')
+        try:
+            subnet = subnet_item.pop('subnet')
+        except KeyError as e:
+            raise TypeError(f'Missing mandatory subnet key: {e}')
 
         for s in self.conf[SUBNETS]:
             if (s[USR_CTX][PREFIX] == prefix_id and s['subnet'] == subnet):
-                logging.info(f'subnet {subnet}: update with {options}')
-                s.update(options)
+                logging.info(f'subnet {subnet}: update with {subnet_item}')
+                s.update(subnet_item)
                 break
         else:
             raise SubnetNotFound(f'key pair id={prefix_id}/subnet="{subnet}"')
 
     @_autocommit
-    def set_pool(self, prefix_id, iprange_id, start, end):
+    def set_pool(self, prefix_id, iprange_id, pool_item):
         """ Replace pool or append a new one """
 
-        pool = f'{start}-{end}'
-        new = {'pool': pool, USR_CTX: {IP_RANGE: iprange_id}}
+        try:
+            start, end = pool_item['pool'].split('-')
+        except KeyError as e:
+            raise TypeError(f'Missing mandatory pool key: {e}')
+
+        pool_item.setdefault(USR_CTX, {})[IP_RANGE] = iprange_id
         ip_start, ip_end = ip_interface(start), ip_interface(end)
 
         def raise_conflict(p):
-            pool = p.get('pool')
-            if pool:
-                s, e = _boundaries(pool)
+            pl = p.get('pool')
+            if pl:
+                s, e = _boundaries(pl)
                 if s <= ip_start <= e or s <= ip_end <= e:
-                    raise DuplicateValue(f'overlaps existing pool {pool}')
+                    raise DuplicateValue(f'overlaps existing pool {pl}')
 
         self._set_subnet_item(
-            prefix_id, POOLS, IP_RANGE, iprange_id, new, raise_conflict, pool)
+            prefix_id, POOLS, IP_RANGE, iprange_id, pool_item, raise_conflict,
+            pool_item['pool'])
 
     @_autocommit
     def del_pool(self, iprange_id):
         self._del_prefix_item(POOLS, IP_RANGE, iprange_id)
 
     @_autocommit
-    def set_reservation(self, prefix_id, ipaddr_id, ipaddr, hw_addr, hostname):
+    def set_reservation(self, prefix_id, ipaddr_id, resa_item):
         """ Replace host reservation or append a new one """
 
-        new = {'ip-address': ipaddr, 'hw-address': hw_addr,
-               'hostname': hostname, USR_CTX: {IP_ADDR: ipaddr_id}}
+        for k in ('ip-address', 'hw-address', 'ip-address'):
+            if k not in resa_item:
+                raise TypeError(f'Missing mandatory reservation key: {k}')
 
-        def raise_conflict(resa):
-            if resa.get('hw-address') == hw_addr:
-                raise DuplicateValue(f'duplicate hw-address={hw_addr}')
-            elif self.ip_uniqueness and resa.get('ip-address') == ipaddr:
-                raise DuplicateValue(f'duplicate address={ipaddr}')
+        resa_item.setdefault(USR_CTX, {})[IP_ADDR] = ipaddr_id
+
+        def raise_conflict(r):
+            if r.get('hw-address') == resa_item['hw-address']:
+                raise DuplicateValue(
+                    f'duplicate hw-address={r["hw-address"]}')
+            elif (self.ip_uniqueness and r.get('ip-address') ==
+                    resa_item['ip-address']):
+                raise DuplicateValue(f'duplicate address={r["ip-address"]}')
 
         self._set_subnet_item(
-            prefix_id, RESAS, IP_ADDR, ipaddr_id, new, raise_conflict, hw_addr)
+            prefix_id, RESAS, IP_ADDR, ipaddr_id, resa_item, raise_conflict,
+            resa_item['hw-address'])
 
     @_autocommit
     def del_resa(self, ipaddr_id):
