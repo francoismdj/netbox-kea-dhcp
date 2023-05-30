@@ -53,8 +53,10 @@ kea_url = "http://10.94.135.209:8000/"
 #"option-data.domain-name-servers" = "custom_fields.dhcp_option_data_domain_name_servers"
 #next-server = "custom_fields.dhcp_next_server"
 #boot-file-name = "custom_fields.dhcp_boot_file_name"
+#valid-lifetime = "custom_fields.dhcp_valid_lifetime"
+
 # Example of a nested DHCP dictionary
-#"user-context.netbox_tenant" = "tenant.name"
+#"user-context.tenant" = "tenant.name"
 
 # Default pool<->IP range map: no map
 #[pool_iprange_map]

@@ -37,7 +37,8 @@ class Config:
         'option-data.domain-name-servers':
             'custom_fields.dhcp_option_data_domain_name_servers',
         'next-server': 'custom_fields.dhcp_next_server',
-        'boot-file-name': 'custom_fields.dhcp_boot_file_name'})
+        'boot-file-name': 'custom_fields.dhcp_boot_file_name',
+        'valid-lifetime': 'custom_fields.dhcp_valid_lifetime'})
     pool_iprange_map: dict = field(default_factory=lambda: {})
     reservation_ipaddr_map: dict = field(default_factory=lambda: {
         # Get MAC address from custom field, fallback to assigned interface
