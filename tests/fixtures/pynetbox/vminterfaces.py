@@ -17,7 +17,7 @@ _common = {
     'has_details': True,
     'l2vpn_termination': None,
     'last_updated': '2023-03-28T08:15:56.256950Z',
-    'mac_address': '11:22:33:44:55:22',
+    'mac_address': '55:55:55:55:55:55',
     'mode': None,
     'mtu': None,
     'parent': None,

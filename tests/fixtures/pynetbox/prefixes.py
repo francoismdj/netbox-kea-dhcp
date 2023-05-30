@@ -34,3 +34,13 @@ _pref_100.update({
     'prefix': '192.168.0.0/24'})
 
 prefix_100 = Prefixes(_pref_100, api, None)
+
+_pref_101 = _common.copy()
+_pref_101.update({
+    'custom_fields': {'dhcp_enable': True,
+                      'dhcp_option_data_domain_search': 'local, lan10',
+                      'dhcp_option_data_routers': '10.254.254.254'},
+    'display': '10.0.0.0/8',
+    'id': 101,
+    'prefix': '10.0.0.0/8'})
+prefix_101 = Prefixes(_pref_101, api, None)
