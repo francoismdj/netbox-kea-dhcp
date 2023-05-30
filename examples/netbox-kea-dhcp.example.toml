@@ -41,6 +41,12 @@ kea_url = "http://10.94.135.209:8000/"
 #dhcp_option_data_domain_name_servers = "option-data.domain-name-servers"
 #dhcp_next_server = "next-server"
 #dhcp_boot_file_name = "boot-file-name"
+[subnet_prefix_map]
+option-data.routers = 'custom_fields.dhcp_option_data_routers'
+option-data.domain-search = 'custom_fields.dhcp_option_data_domain_search'
+option-data.domain-name-servers = 'custom_fields.dhcp_option_data_domain_name_servers'
+next-server = 'custom_fields.dhcp_next_server'
+boot-file-name = 'custom_fields.dhcp_boot_file_name'
 
 #
 # Filters: params injected into netbox API queries to restrict selected objects
