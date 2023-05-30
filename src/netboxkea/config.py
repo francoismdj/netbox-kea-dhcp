@@ -102,4 +102,13 @@ def get_config():
                 'arguments nor in configuration file (if any)')
             sys.exit(1)
 
-    return Config(**settings)
+    conf = Config(**settings)
+
+    if not set(['hw-address', 'hostname']).issubset(
+            conf.reservation_ipaddr_map):
+        logging.fatal(
+            'Setting "reservation_ipaddr_map" must have a mapping for '
+            '"hw-address" and "hostname" DHCP parameters')
+        sys.exit(1)
+
+    return conf
