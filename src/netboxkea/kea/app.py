@@ -206,7 +206,7 @@ class DHCP4App:
     def set_reservation(self, prefix_id, ipaddr_id, resa_item):
         """ Replace host reservation or append a new one """
 
-        for k in ('ip-address', 'hw-address', 'ip-address'):
+        for k in ('ip-address', 'hw-address'):
             if k not in resa_item:
                 raise TypeError(f'Missing mandatory reservation key: {k}')
 
