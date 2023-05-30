@@ -35,17 +35,12 @@ class NetboxApp:
                 yield r
 
     def ip_address(self, id_):
-        i = self.nb.ipam.ip_addresses.get(
-            id=id_, assigned_to_interface=True, **self.ipaddress_filter)
-        if i and i.assigned_object.mac_address:
-            return i
+        return self.nb.ipam.ip_addresses.get(id=id_, **self.ipaddress_filter)
 
     def ip_addresses(self, **filters):
         if not filters:
             raise ValueError(
                 'Netboxapp.ip_addresses() requires at least one keyword arg')
         for i in self.nb.ipam.ip_addresses.filter(
-                assigned_to_interface=True, **self.ipaddress_filter,
-                **filters):
-            if i.assigned_object.mac_address:
-                yield i
+                **self.ipaddress_filter, **filters):
+            yield i
