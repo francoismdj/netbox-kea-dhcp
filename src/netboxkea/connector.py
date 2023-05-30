@@ -1,18 +1,23 @@
 import logging
+
 from ipaddress import ip_interface
 
 from .kea.exceptions import KeaError, KeaClientError, SubnetNotFound
 
 
-def _get_nested_attr(obj, attrs, sep='.'):
-    """ Apply getattr on a nested list of attributes seperated by separator """
+def _get_nested(obj, attrs, sep='.'):
+    """ Get value from a nested list of attributes or keys separated by sep """
 
     value = obj
     for a in attrs.split(sep):
-        value = getattr(value, a)
+        # getattr must be tried first because it triggers additionnal query
+        # to netbox API
+        try:
+            value = getattr(value, a)
+        except AttributeError:
+            value = value[a]
 
-    if value != obj:
-        return value
+    return value
 
 
 def _set_dhcp_attr(dhcp_item, key, value):
@@ -40,12 +45,12 @@ def _mk_dhcp_item(nb_obj, mapping):
         # Get value from netbox object
         attrs = [nb_attr] if isinstance(nb_attr, str) else nb_attr
         # Map value is expected to be list of attributes. The first
-        # existing and non-null attribute is the DHCP value
+        # existing and non-null attribute will be used as the DHCP value
         value = None
         for a in attrs:
             try:
-                value = _get_nested_attr(nb_obj, a)
-            except AttributeError:
+                value = _get_nested(nb_obj, a)
+            except (TypeError, KeyError):
                 continue
             if value:
                 break
@@ -195,6 +200,9 @@ class Connector:
         prefixes = [prefix] if prefix else self.nb.prefixes(
             contains=ip.address)
         resa = _mk_dhcp_item(ip, self.reservation_ipaddr_map)
+        if not resa.get('hw-address'):
+            return
+
         resa['ip-address'] = str(ip_interface(ip.address).ip)
         for pref in prefixes:
             try:
