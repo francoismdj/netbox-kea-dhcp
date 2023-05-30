@@ -47,12 +47,20 @@ kea_url = "http://10.94.135.209:8000/"
 #
 # See API documentation on http://netbox-host/api/docs/.
 # IMPORTANT: non existent params are silently ignored!!
+
+# Default prefix filter:
+#[prefix_filter]
+#cf_dhcp_enabled = true
+
+# Example: restrict prefixes
 [prefix_filter]
 status = "active"
 cf_dhcp_enabled = true
 
-[iprange_filter]
-status = "dhcp"    # "dhcp" value is a custom status as of netbox version 3.4
+# Default IP range filter:
+#[iprange_filter]
+# ATTENTION: "dhcp" is a custom status value, it needs to be created (in v3.4)
+#status = "dhcp"
 
 # Default IP address filter:
 #[ipaddress_filter]

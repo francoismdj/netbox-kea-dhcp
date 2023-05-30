@@ -26,9 +26,10 @@ class Config:
     kea_url: str = None
     netbox_url: str = None
     netbox_token: str = None
-    prefix_filter: dict = field(default_factory=dict)
+    prefix_filter: dict = field(default_factory=lambda: {
+        'cf_dhcp_enabled': True})
     ipaddress_filter: dict = field(default_factory=lambda: {'status': 'dhcp'})
-    iprange_filter: dict = field(default_factory=dict)
+    iprange_filter: dict = field(default_factory=lambda: {'status': 'dhcp'})
     subnet_prefix_map: dict = field(default_factory=lambda: {
         'option-data.routers': 'custom_fields.dhcp_option_data_routers',
         'option-data.domain-search':
