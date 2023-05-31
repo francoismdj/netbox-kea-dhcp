@@ -7,7 +7,7 @@ Enable use of [NetBox](https://github.com/netbox-community/netbox) as a subnet
 configuration source for [ISC Kea DHCP server](https://www.isc.org/kea/).
 
 `netbox-kea-dhcp` is a one-way sync daemon that exports NetBox prefixes, IP
-ranges and IP addresse/interface pairs to respectively DHCP subnets, pools
+ranges and IP addresses to respectively DHCP subnets, pools
 and host reservations. It listens for NetBox webhook events, and each time a
 change occured, it queries NetBox for the full changed data and update Kea
 throught its API.
@@ -36,16 +36,16 @@ Key features
   interface, loose dependency with NetBox internals (only with its API),
   reduced code to maintain.
 - Customizable NetBox query filters.
-- Customizable mapping between Netbox prefix fields and subnets options.
+- Customizable mapping between Netbox object attributes and DHCP settings.
 
 Requirements
 ------------
 
-Python: >= 3.8 (developped on 3.10 but may works down to 3.7).
+Python: >= 3.8 (tested on 3.10 but may works down to 3.8).
 
-Netbox: developped for API version 3.4.
+Netbox: validated on API version 3.4.
 
-ISC Kea DHCP: developped for version 2.2.0.
+ISC Kea DHCP: validated on version 2.2.0.
 
 Install
 -------
@@ -114,8 +114,13 @@ app was installed with pipx).
 Recommended Netbox webhooks
 ---------------------------
 
-It’s recommended to set several webhooks with conditions and restricted body
-template, in order to filter events and avoid unecessary network and CPU load:
+Sysadmins should set several webhooks with conditions and restricted body
+template, in order to filter events and avoid unecessary network and CPU load.
+
+Below is a recommended webhook set-up. It assumes that DHCP hardware addresses
+are apped with netbox interface MAC addresses. If interfaces are not used
+(i.e. hardware addresses are only mapped with a custom field defined in netbox
+IP addresses), webhooks on (vm) interfaces, (virtual) devices are not needed.
 
 Common to all webhooks:
 
@@ -146,21 +151,13 @@ Webhook 2:
 - Conditions:
 
     ```json
-    { "and": [
-      { "attr": "status.value", "value": "dhcp" },
-      {
-        "attr": "assigned_object_type",
-        "value": [ "dcim.interface", "virtualization.vminterface" ],
-        "op": "in"
-      }
-    ] }
+    { "and": [ { "attr": "status.value", "value": "dhcp" } ] }
     ```
 
 Webhook 3:
 
 - Content types: `IPAM > IP Range`
 - Events: `Creations`, `Deletions`
-- Body template: `{"event": event, "model": model, "data": {"id": data["id"]}}`
 - Conditions (note: you may have to customize status values to add `dhcp`):
 
     ```json
@@ -171,7 +168,6 @@ Webhook 4:
 
 - Content types: `IPAM > Prefix`
 - Events: `Creations`, `Deletions`
-- Body template: `{"event": event, "model": model, "data": {"id": data["id"]}}`
 - Conditions: none, or a custom field
 
     ```json
@@ -185,13 +181,14 @@ Limitations
 -----------
 
 - When a change occured, the whole DHCP configuration is gotten from Kea,
-  modified, and sent back. This is a limitation of Kea open source commands. A
-  better update granularity would require an ISC paid subscription.
-- Every event received triggers one or more queries to Netbox, even if event
-  payload holds the information. This allows to have a unique  point where
-  filters are applied and attributes are read.
+  modified, and sent back. It may put some stress on the DHCP server in case of
+  frequent changes. This is a limitation of Kea open source commands. A better
+  update granularity would require an ISC paid subscription.
 - Kea internal subnet `id` keys are not preserved, as they induce conflicts
-  when configuration is pushed back to the DHCP server.
+  when configuration is pushed back to the DHCP server. This may have drawbacks
+  in case subnets are frequently added/removed, as some Kea configuration
+  elements (like leases…) are attached to the identifier. Subnets identifiers
+  could be preserved by using Kea paid hooks.
 - When Kea URI is of the form `file:///path/to/kea-config`, config is written
   to the file in an unsafe manner: if the write fails, the file will be
-  inconsistent. This is because the file feature was coded for testing purpose.
+  inconsistent. This is because the file feature is intended for tests.
