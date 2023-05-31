@@ -10,8 +10,8 @@ def _get_nested(obj, attrs, sep='.'):
 
     value = obj
     for a in attrs.split(sep):
-        # getattr must be tried first because it triggers additionnal query
-        # to netbox API
+        # getattr must be tried before dict.get because it is able to trigger
+        # additionnal queries to netbox API.
         try:
             value = getattr(value, a)
         except AttributeError:
@@ -23,14 +23,15 @@ def _get_nested(obj, attrs, sep='.'):
 def _set_dhcp_attr(dhcp_item, key, value):
     """
     Set value to DHCP item dictionary. Key may be nested keys separated
-    by dots, in which case each key represents a nested dictionary
+    by dots, in which case each key represents a nested dictionary (or list, if
+    the parent attribut is known to use a list).
     """
 
     k1, _, k2 = key.partition('.')
     if not k2:
         dhcp_item[key] = value
     elif k1 in ['option-data']:
-        # Some keys hold a list of data/name dicts
+        # Some keys hold a list of name/data dicts
         dhcp_item.setdefault(k1, []).append(
             {'name': k2, 'data': value})
     else:
@@ -192,9 +193,12 @@ class Connector:
             try:
                 self.kea.set_pool(pref.id, iprange.id, pool)
             except SubnetNotFound:
-                logging.warning(
-                    f'subnet {pref.prefix} is missing, let’s sync it again')
-                self._prefix_to_subnet(pref, fullsync=True)
+                if not prefix:
+                    logging.warning(
+                        f'subnet {pref.prefix} is missing, sync it again')
+                    self._prefix_to_subnet(pref, fullsync=True)
+                else:
+                    logging.error(f'requested subnet {pref.prefix} not found')
 
     def _ipaddr_to_resa(self, ip, prefix=None):
         prefixes = [prefix] if prefix else self.nb.prefixes(
@@ -208,4 +212,9 @@ class Connector:
             try:
                 self.kea.set_reservation(pref.id, ip.id, resa)
             except SubnetNotFound:
-                self._prefix_to_subnet(pref)
+                if not prefix:
+                    logging.warning(
+                        f'subnet {pref.prefix} is missing, sync it again')
+                    self._prefix_to_subnet(pref)
+                else:
+                    logging.error(f'requested subnet {pref.prefix} not found')
