@@ -37,14 +37,15 @@ kea_url = "http://10.94.135.209:8000/"
 #
 # If the DHCP attribute have a dot and the part before the dot is "option-data"
 # the part after the dot will be added to option-data list as a dictionary
-# with two keys: "name"={part after the dot} and "value"={value from netbox}.
+# with two keys: "name"={part after the dot} and "data"={value from netbox}.
 # If the part before the dot is not a known list as option-data, the part after
 # will be a nested dictionary.
-# Each netbox fields may contain several dots which act as a seperator between
-# objects or dictionary keys.
-# A Netbox map may be a list of netbox fields. In this case, the first non-empty
-# field will be used as the DHCP value.
-# In respect to TOML syntax, attribute with dots in name need to be double-quoted.
+# Each netbox fields may contains several dots which are seperators between
+# nested objects or dictionary keys.
+# A Netbox map may be a list of netbox fields. In this case, the first
+# non-empty field will be used as the DHCP value.
+# In respect to TOML syntax, attribute with dots in name need to be
+# double-quoted.
 
 # Default subnet<->prefix map:
 #[subnet_prefix_map]
@@ -63,6 +64,7 @@ kea_url = "http://10.94.135.209:8000/"
 
 # Default IP reservation<->IP address map
 #[reservation_ipaddr_map]
+# "hw-address" and "hostname" DHCP settings are required
 ## Get MAC address from custom field, fallback to assigned interface MAC address
 #hw-address = [ "custom_fields.dhcp_resa_hw_address",
 #               "assigned_object.mac_address" ]
@@ -72,7 +74,7 @@ kea_url = "http://10.94.135.209:8000/"
 
 
 #
-# Filters: params injected into netbox API queries to restrict selected objects
+# Filters: params injected into netbox API queries to restrict object selection
 #
 # See API documentation on http://netbox-host/api/docs/.
 # IMPORTANT: non existent params are silently ignored!!
@@ -81,7 +83,7 @@ kea_url = "http://10.94.135.209:8000/"
 #[prefix_filter]
 #cf_dhcp_enabled = true
 
-# Example: filter out non-active prefixes
+# Example of a filte that includes only active prefixes
 [prefix_filter]
 status = "active"
 cf_dhcp_enabled = true
