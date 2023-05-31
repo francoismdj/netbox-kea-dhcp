@@ -16,7 +16,7 @@ IP_ADDR = 'netbox_ip_address_id'
 
 
 def _autocommit(func):
-    """ Decoraton to autocommit changes after method execution """
+    """ Decorator to autocommit changes after method execution """
 
     def wrapper(self, *args, **kwargs):
         res = func(self, *args, **kwargs)
