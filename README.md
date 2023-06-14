@@ -91,6 +91,14 @@ netbox-kea-dhcp --netbox-url http://netbox-host \
     --kea-url http://kea-api-host --sync-now --listen -v
 ```
 
+The default mapping between netbox and Kea is:
+
+- prefixes are exported to subnets.
+- IP ranges are exported to pools.
+- IP Addresses are exported to reservations. Hardware address is mapped with IP
+  address custom field `dhcp_reservation_hw_address` if it exists and is non
+  null, otherwise it is mapped with the MAC address of the assigned object.
+
 At least one Netbox webhook needs to be configured for event listening. It has
 to notify all actions on DHCP-relevant objects:
 
