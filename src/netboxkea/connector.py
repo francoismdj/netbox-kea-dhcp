@@ -1,48 +1,80 @@
 import logging
+
 from ipaddress import ip_interface
 
 from .kea.exceptions import KeaError, KeaClientError, SubnetNotFound
 
 
-def _map_dhcp_attrs(dhcp_map, netbox_fields):
-    """ Convert netbox fields to DHCP configuration dictionary """
+def _get_nested(obj, attrs, sep='.'):
+    """ Get value from a nested list of attributes or keys separated by sep """
 
-    dhcp_conf = {}
-    # For each custom field, get corresponding DHCP server attribute
-    for k, v in netbox_fields.items():
-        # Kea don’t like None value (TODO even if JSON converts to "null"?)
-        if v is None:
-            continue
+    value = obj
+    for a in attrs.split(sep):
+        # getattr must be tried before dict.get because it is able to trigger
+        # additionnal queries to netbox API.
         try:
-            # DHCP server attribute represents dot-separated nested attrs
-            parts = dhcp_map[k].split('.')
-        except KeyError:
-            # logging.debug(f'no mapping for netbox DHCP attr {k}')
-            continue
-        # option-data are in a list of data/name dict
-        if parts[0] == 'option-data':
-            dhcp_conf.setdefault('option-data', []).append(
-                {'name': parts[1], 'data': v})
-        else:
-            # Convert attribute parts to dict, except for the last part
-            # which actually hold the value.
-            opt = dhcp_conf
-            last_index = len(parts) - 1
-            for i, part in enumerate(parts):
-                if i < last_index:
-                    if part not in opt:
-                        opt[part] = {}
-                    opt = opt[part]
-            opt[part] = v
-    return dhcp_conf
+            value = getattr(value, a)
+        except AttributeError:
+            value = value[a]
+
+    return value
+
+
+def _set_dhcp_attr(dhcp_item, key, value):
+    """
+    Set value to DHCP item dictionary. Key may be nested keys separated
+    by dots, in which case each key represents a nested dictionary (or list, if
+    the parent attribut is known to use a list).
+    """
+
+    k1, _, k2 = key.partition('.')
+    if not k2:
+        dhcp_item[key] = value
+    elif k1 in ['option-data']:
+        # Some keys hold a list of name/data dicts
+        dhcp_item.setdefault(k1, []).append(
+            {'name': k2, 'data': value})
+    else:
+        dhcp_item.setdefault(k1, {})[k2] = value
+
+
+def _mk_dhcp_item(nb_obj, mapping):
+    """ Convert a netbox object to a DHCP dictionary item """
+
+    dhcp_item = {}
+    for dhcp_attr, nb_attr in mapping.items():
+        # Get value from netbox object
+        attrs = [nb_attr] if isinstance(nb_attr, str) else nb_attr
+        # Map value is expected to be list of attributes. The first
+        # existing and non-null attribute will be used as the DHCP value
+        value = None
+        for a in attrs:
+            try:
+                value = _get_nested(nb_obj, a)
+            except (TypeError, KeyError):
+                continue
+            if value:
+                break
+
+        # Set value to DHCP setting
+        # Kea don’t like None value (TODO even if JSON converts it to "null"?)
+        if value is not None:
+            _set_dhcp_attr(dhcp_item, dhcp_attr, value)
+
+    return dhcp_item
 
 
 class Connector:
-    def __init__(self, nb, kea, check=False, prefix_dhcp_map={}):
+    """ Main class that connects Netbox objects to Kea DHCP config items """
+
+    def __init__(self, nb, kea, prefix_subnet_map, pool_iprange_map,
+                 reservation_ipaddr_map, check=False):
         self.nb = nb
         self.kea = kea
+        self.subnet_prefix_map = prefix_subnet_map
+        self.pool_iprange_map = pool_iprange_map
+        self.reservation_ipaddr_map = reservation_ipaddr_map
         self.check = check
-        self.prefix_dhcp_map = prefix_dhcp_map
 
     def sync_all(self):
         """ Replace current DHCP configuration by a new generated one """
@@ -125,19 +157,18 @@ class Connector:
             self.sync_ipaddress(i.id)
 
     def _prefix_to_subnet(self, pref, fullsync=False):
-        options = _map_dhcp_attrs(self.prefix_dhcp_map, pref.custom_fields)
+        subnet = _mk_dhcp_item(pref, self.subnet_prefix_map)
+        subnet['subnet'] = pref.prefix
         if not fullsync:
             try:
-                self.kea.set_subnet_options(
-                    prefix_id=pref.id, subnet=pref.prefix, options=options)
+                self.kea.update_subnet(pref.id, subnet)
             except SubnetNotFound:
                 # No subnet matching prefix_id/subnet_value. Create a new one
                 self.kea.del_subnet(pref.id, commit=False)
                 fullsync = True
 
         if fullsync:
-            self.kea.set_subnet(
-                prefix_id=pref.id, subnet=pref.prefix, options=options)
+            self.kea.set_subnet(pref.id, subnet)
             # Add host reservations
             for i in self.nb.ip_addresses(parent=pref.prefix):
                 try:
@@ -154,34 +185,36 @@ class Connector:
     def _iprange_to_pool(self, iprange, prefix=None):
         prefixes = [prefix] if prefix else self.nb.prefixes(
             contains=iprange.start_address)
+        pool = _mk_dhcp_item(iprange, self.pool_iprange_map)
+        start = str(ip_interface(iprange.start_address).ip)
+        end = str(ip_interface(iprange.end_address).ip)
+        pool['pool'] = f'{start}-{end}'
         for pref in prefixes:
             try:
-                start = str(ip_interface(iprange.start_address).ip)
-                end = str(ip_interface(iprange.end_address).ip)
-                self.kea.set_pool(
-                    prefix_id=pref.id, iprange_id=iprange.id, start=start,
-                    end=end)
+                self.kea.set_pool(pref.id, iprange.id, pool)
             except SubnetNotFound:
-                logging.warning(
-                    f'subnet {pref.prefix} is missing, let’s sync it again')
-                self._prefix_to_subnet(pref, fullsync=True)
+                if not prefix:
+                    logging.warning(
+                        f'subnet {pref.prefix} is missing, sync it again')
+                    self._prefix_to_subnet(pref, fullsync=True)
+                else:
+                    logging.error(f'requested subnet {pref.prefix} not found')
 
     def _ipaddr_to_resa(self, ip, prefix=None):
         prefixes = [prefix] if prefix else self.nb.prefixes(
             contains=ip.address)
-        # Get hostname from DNS name, fallback to device name
-        if ip.dns_name:
-            hostname = ip.dns_name
-        else:
-            try:
-                hostname = ip.assigned_object.device.name
-            except AttributeError:
-                hostname = ip.assigned_object.virtual_machine.name
+        resa = _mk_dhcp_item(ip, self.reservation_ipaddr_map)
+        if not resa.get('hw-address'):
+            return
+
+        resa['ip-address'] = str(ip_interface(ip.address).ip)
         for pref in prefixes:
             try:
-                addr = str(ip_interface(ip.address).ip)
-                self.kea.set_reservation(
-                    prefix_id=pref.id, ipaddr_id=ip.id, ipaddr=addr,
-                    hw_addr=ip.assigned_object.mac_address, hostname=hostname)
+                self.kea.set_reservation(pref.id, ip.id, resa)
             except SubnetNotFound:
-                self._prefix_to_subnet(pref)
+                if not prefix:
+                    logging.warning(
+                        f'subnet {pref.prefix} is missing, sync it again')
+                    self._prefix_to_subnet(pref)
+                else:
+                    logging.error(f'requested subnet {pref.prefix} not found')

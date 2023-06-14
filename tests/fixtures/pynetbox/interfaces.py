@@ -61,7 +61,7 @@ _if_300.update({
     'device': devices.device_400,
     'display': 'pc-if0',
     'id': 300,
-    'mac_address': '11:22:33:44:55:66',
+    'mac_address': '11:11:11:11:11:11',
     'name': 'pc-if0',
     'url': 'http://netbox/api/dcim/interfaces/300/',
     })

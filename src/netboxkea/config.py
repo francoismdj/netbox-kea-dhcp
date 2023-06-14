@@ -26,16 +26,28 @@ class Config:
     kea_url: str = None
     netbox_url: str = None
     netbox_token: str = None
-    prefix_filter: dict = field(default_factory=dict)
+    prefix_filter: dict = field(default_factory=lambda: {
+        'cf_dhcp_enabled': True})
     ipaddress_filter: dict = field(default_factory=lambda: {'status': 'dhcp'})
-    iprange_filter: dict = field(default_factory=dict)
-    prefix_dhcp_map: dict = field(default_factory=lambda: {
-        'dhcp_option_data_routers': 'option-data.routers',
-        'dhcp_option_data_domain_search': 'option-data.domain-search',
-        'dhcp_option_data_domain_name_servers':
-            'option-data.domain-name-servers',
-        'dhcp_next_server': 'next-server',
-        'dhcp_boot_file_name': 'boot-file-name'})
+    iprange_filter: dict = field(default_factory=lambda: {'status': 'dhcp'})
+    subnet_prefix_map: dict = field(default_factory=lambda: {
+        'option-data.routers': 'custom_fields.dhcp_option_data_routers',
+        'option-data.domain-search':
+            'custom_fields.dhcp_option_data_domain_search',
+        'option-data.domain-name-servers':
+            'custom_fields.dhcp_option_data_domain_name_servers',
+        'next-server': 'custom_fields.dhcp_next_server',
+        'boot-file-name': 'custom_fields.dhcp_boot_file_name',
+        'valid-lifetime': 'custom_fields.dhcp_valid_lifetime'})
+    pool_iprange_map: dict = field(default_factory=lambda: {})
+    reservation_ipaddr_map: dict = field(default_factory=lambda: {
+        # Get MAC address from custom field, fallback to assigned interface
+        'hw-address': ['custom_fields.dhcp_reservation_hw_address',
+                       'assigned_object.mac_address'],
+        # Get hostname from DNS name, fallback to device/vm name
+        'hostname': ['dns_name', 'assigned_object.device.name',
+                     'assigned_object.virtual_machine.name']
+        })
 
 
 def get_config():
@@ -92,4 +104,13 @@ def get_config():
                 'arguments nor in configuration file (if any)')
             sys.exit(1)
 
-    return Config(**settings)
+    conf = Config(**settings)
+
+    if not set(['hw-address', 'hostname']).issubset(
+            conf.reservation_ipaddr_map):
+        logging.fatal(
+            'Setting "reservation_ipaddr_map" must have a mapping for '
+            '"hw-address" and "hostname" DHCP parameters')
+        sys.exit(1)
+
+    return conf
