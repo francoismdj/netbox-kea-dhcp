@@ -158,19 +158,32 @@ class DHCP4App:
     @_autocommit
     def update_subnet(self, prefix_id, subnet_item):
         """
-        Replace options of subnet identified by the pair {prefix_id}/{subnet}.
+        Replace subnet options identified by the pair {prefix_id}/{subnet}.
+        Keep current reservations and pools.
         Raise SubnetNotFound if no subnet matches.
         """
 
         try:
-            subnet = subnet_item.pop('subnet')
+            subnet = subnet_item['subnet']
         except KeyError as e:
             raise TypeError(f'Missing mandatory subnet key: {e}')
 
+        logging.debug(f'search subnet {subnet} with netbox id {prefix_id}')
         for s in self.conf[SUBNETS]:
             if (s[USR_CTX][PREFIX] == prefix_id and s['subnet'] == subnet):
                 logging.info(f'subnet {subnet}: update with {subnet_item}')
+                # Drop subnet parameters excepts for reservations and options.
+                # This is to ensure we will not inject options defined by Kea
+                # himself (not coming from netbox fields), as some of them
+                # may prevent setting others (like min/max-valid-lifetime wich
+                # would prevent from setting an out-of-bound valid-lifetime).
+                resas = s[RESAS]
+                pools = s[POOLS]
+                s.clear()
                 s.update(subnet_item)
+                s.setdefault(USR_CTX, {})[PREFIX] = prefix_id
+                s.setdefault(RESAS, resas)
+                s.setdefault(POOLS, pools)
                 break
         else:
             raise SubnetNotFound(f'key pair id={prefix_id}/subnet="{subnet}"')
