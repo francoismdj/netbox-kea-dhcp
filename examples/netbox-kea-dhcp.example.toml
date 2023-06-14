@@ -66,7 +66,7 @@ kea_url = "http://10.94.135.209:8000/"
 #[reservation_ipaddr_map]
 # "hw-address" and "hostname" DHCP settings are required
 ## Get MAC address from custom field, fallback to assigned interface MAC address
-#hw-address = [ "custom_fields.dhcp_resa_hw_address",
+#hw-address = [ "custom_fields.dhcp_reservation_hw_address",
 #               "assigned_object.mac_address" ]
 # Get hostname from DNS name, fallback to device/vm name
 #hostname = [ "dns_name", "assigned_object.device.name",

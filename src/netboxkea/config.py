@@ -42,7 +42,7 @@ class Config:
     pool_iprange_map: dict = field(default_factory=lambda: {})
     reservation_ipaddr_map: dict = field(default_factory=lambda: {
         # Get MAC address from custom field, fallback to assigned interface
-        'hw-address': ['custom_fields.dhcp_resa_hw_address',
+        'hw-address': ['custom_fields.dhcp_reservation_hw_address',
                        'assigned_object.mac_address'],
         # Get hostname from DNS name, fallback to device/vm name
         'hostname': ['dns_name', 'assigned_object.device.name',
