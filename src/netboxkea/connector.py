@@ -205,6 +205,7 @@ class Connector:
             contains=ip.address)
         resa = _mk_dhcp_item(ip, self.reservation_ipaddr_map)
         if not resa.get('hw-address'):
+            self.kea.del_resa(ip.id)
             return
 
         resa['ip-address'] = str(ip_interface(ip.address).ip)
