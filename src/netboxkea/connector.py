@@ -2,7 +2,8 @@ import logging
 
 from ipaddress import ip_interface
 
-from .kea.exceptions import KeaError, KeaClientError, SubnetNotFound
+from .kea.exceptions import (KeaError, KeaClientError, SubnetNotEqual,
+                             SubnetNotFound)
 
 
 def _get_nested(obj, attrs, sep='.'):
@@ -162,9 +163,8 @@ class Connector:
         if not fullsync:
             try:
                 self.kea.update_subnet(pref.id, subnet)
-            except SubnetNotFound:
-                # No subnet matching prefix_id/subnet_value. Create a new one
-                self.kea.del_subnet(pref.id, commit=False)
+            except (SubnetNotEqual, SubnetNotFound):
+                # Subnet address has changed or subnet is missing, recreate it
                 fullsync = True
 
         if fullsync:

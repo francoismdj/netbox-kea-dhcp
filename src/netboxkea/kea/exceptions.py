@@ -10,6 +10,10 @@ class KeaClientError(KeaError):
     pass
 
 
+class SubnetNotEqual(KeaError):
+    pass
+
+
 class SubnetNotFound(KeaClientError):
     pass
 
