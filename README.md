@@ -192,11 +192,6 @@ Limitations
   modified, and sent back. It may put some stress on the DHCP server in case of
   frequent changes. This is a limitation of Kea open source commands. A better
   update granularity would require an ISC paid subscription.
-- Kea internal subnet `id` keys are not preserved, as they induce conflicts
-  when configuration is pushed back to the DHCP server. This may have drawbacks
-  in case subnets are frequently added/removed, as some Kea configuration
-  elements (like leases…) are attached to the identifier. Subnets identifiers
-  could be preserved by using Kea paid hooks.
 - When Kea URI is of the form `file:///path/to/kea-config`, config is written
   to the file in an unsafe manner: if the write fails, the file will be
   inconsistent. This is because the file feature is intended for tests.
