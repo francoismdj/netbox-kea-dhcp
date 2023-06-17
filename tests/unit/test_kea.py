@@ -72,8 +72,8 @@ class TestKea(unittest.TestCase):
 
     def test_10_set_subnet(self):
         expected = {'subnet4': [
-            {'subnet': '192.168.0.0/24', 'pools': [], 'reservations': [],
-             'user-context': {'netbox_prefix_id': 100}}]}
+            {'id': 100, 'subnet': '192.168.0.0/24', 'pools': [],
+             'reservations': []}]}
         self._set_std_subnet()
         self.kea.push()
         self.assertEqual(self.srv_conf['Dhcp4'], expected)
@@ -115,11 +115,12 @@ class TestKea(unittest.TestCase):
 
     def test_20_set_reservation(self):
         expected = {'subnet4': [
-            {'subnet': '192.168.0.0/24', 'pools': [], 'reservations': [{
+            {'id': 100, 'subnet': '192.168.0.0/24', 'pools': [],
+             'reservations': [{
                 'ip-address': '192.168.0.1', 'hw-address': '11:22:33:44:55:66',
                 'hostname': 'pc.lan', 'user-context': {
-                    'netbox_ip_address_id': 200}}],
-             'user-context': {'netbox_prefix_id': 100}}]}
+                    'netbox_ip_address_id': 200}}]
+             }]}
         self._set_std_subnet()
         self._set_std_resa()
         self.kea.push()
@@ -176,11 +177,10 @@ class TestKea(unittest.TestCase):
 
     def test_30_set_pool(self):
         expected = {'subnet4': [
-            {'subnet': '192.168.0.0/24', 'pools': [{
+            {'id': 100, 'subnet': '192.168.0.0/24', 'pools': [{
                 'pool': '192.168.0.100-192.168.0.199',
                 'user-context': {'netbox_ip_range_id': 250}
-                }], 'reservations': [],
-             'user-context': {'netbox_prefix_id': 100}}]}
+                }], 'reservations': []}]}
         self._set_std_subnet()
         self._set_std_pool()
         self.kea.push()

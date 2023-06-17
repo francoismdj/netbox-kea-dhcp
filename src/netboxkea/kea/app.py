@@ -3,14 +3,15 @@ from copy import deepcopy
 from ipaddress import ip_interface, ip_network
 
 from .api import DHCP4API, FileAPI
-from .exceptions import DuplicateValue, KeaCmdError, SubnetNotFound
+from .exceptions import (DuplicateValue, KeaCmdError, SubnetNotEqual,
+                         SubnetNotFound)
 
 # Kea configuration keys
 SUBNETS = 'subnet4'
 USR_CTX = 'user-context'
 POOLS = 'pools'
 RESAS = 'reservations'
-PREFIX = 'netbox_prefix_id'
+PREFIX = 'id'
 IP_RANGE = 'netbox_ip_range_id'
 IP_ADDR = 'netbox_ip_address_id'
 
@@ -61,15 +62,9 @@ class DHCP4App:
 
         logging.info('pull running config from DHCP server')
         self.conf = self.api.get_conf()
-        # Set minimal expected keys and remove unwanted ones
+        # Set minimal expected keys
         self.conf.setdefault(SUBNETS, [])
         for s in self.conf[SUBNETS]:
-            try:
-                # id key generates conflicts when conf is pushed back to server
-                del s['id']
-            except KeyError:
-                pass
-            s.setdefault(USR_CTX, {}).setdefault(PREFIX, None)
             for r in s.setdefault(RESAS, []):
                 r.setdefault(USR_CTX, {}).setdefault(IP_ADDR, None)
             for p in s.setdefault(POOLS, []):
@@ -119,28 +114,63 @@ class DHCP4App:
 
     @_autocommit
     def set_subnet(self, prefix_id, subnet_item):
-        """ Replace subnet {prefix_id} or append a new one """
+        """ Replace subnet with prefix ID or append a new one """
+
+        self._set_subnet(prefix_id, subnet_item, only_update_options=False)
+
+    @_autocommit
+    def update_subnet(self, prefix_id, subnet_item):
+        """
+        Update subnet options (preserve current reservations and pools). Raise
+        SubnetNotEqual if network address differs, or SubnetNotFound if no
+        subnet prefix ID matches.
+        """
+
+        self._set_subnet(prefix_id, subnet_item, only_update_options=True)
+
+    def _set_subnet(self, prefix_id, subnet_item, only_update_options):
+        """ Update subnet options, replace subnet or append a new one """
 
         try:
             subnet = subnet_item['subnet']
         except KeyError as e:
             raise TypeError(f'Missing mandatory subnet key: {e}')
 
-        subnet_item.setdefault(USR_CTX, {})[PREFIX] = prefix_id
-        subnet_item.update({RESAS: [], POOLS: []})
-
-        found = None
+        sfound = None
         for s in self.conf[SUBNETS]:
-            if s[USR_CTX][PREFIX] == prefix_id:
-                found = s
+            if s[PREFIX] == prefix_id:
+                sfound = s
+                if s['subnet'] == subnet:
+                    # No network addr change, no need to inspect other subnets
+                    break
+                elif only_update_options:
+                    raise SubnetNotEqual(f'subnet {s["subnet"]} ≠ {subnet}')
+
             # Continue in order to check duplicates
             elif s['subnet'] == subnet:
                 raise DuplicateValue(f'duplicate subnet {subnet}')
-        if found:
-            logging.info(f'subnets > ID {prefix_id}: replace with {subnet}')
-            found.clear()
-            found.update(subnet_item)
+
+        subnet_item[PREFIX] = prefix_id
+        if sfound:
+            if only_update_options:
+                logging.info(f'subnet {subnet}: update with {subnet_item}')
+                # Preserve reservations and pools
+                subnet_item[RESAS] = sfound[RESAS]
+                subnet_item[POOLS] = sfound[POOLS]
+            else:
+                subnet_item.setdefault(RESAS, [])
+                subnet_item.setdefault(POOLS, [])
+                logging.info(f'subnet ID {prefix_id}: replace with {subnet}')
+            # Clear current subnet (except reservations and pools) in order to
+            # drop Kea default options, as they may conflict with our new
+            # settings (like min/max-valid-lifetime against valid-lifetime).
+            sfound.clear()
+            sfound.update(subnet_item)
+        elif only_update_options:
+            raise SubnetNotFound(f'subnet ID {prefix_id}')
         else:
+            subnet_item.setdefault(RESAS, [])
+            subnet_item.setdefault(POOLS, [])
             logging.info(f'subnets: add {subnet}, ID {prefix_id}')
             self.conf[SUBNETS].append(subnet_item)
 
@@ -148,45 +178,12 @@ class DHCP4App:
     def del_subnet(self, prefix_id, commit=None):
         logging.info(f'subnets: remove subnet {prefix_id} if it exists')
         self.conf[SUBNETS] = [
-            s for s in self.conf[SUBNETS] if s[USR_CTX][PREFIX] != prefix_id]
+            s for s in self.conf[SUBNETS] if s[PREFIX] != prefix_id]
 
     @_autocommit
     def del_all_subnets(self):
         logging.info('delete all current subnets')
         self.conf[SUBNETS].clear()
-
-    @_autocommit
-    def update_subnet(self, prefix_id, subnet_item):
-        """
-        Replace subnet options identified by the pair {prefix_id}/{subnet}.
-        Keep current reservations and pools.
-        Raise SubnetNotFound if no subnet matches.
-        """
-
-        try:
-            subnet = subnet_item['subnet']
-        except KeyError as e:
-            raise TypeError(f'Missing mandatory subnet key: {e}')
-
-        logging.debug(f'search subnet {subnet} with netbox id {prefix_id}')
-        for s in self.conf[SUBNETS]:
-            if (s[USR_CTX][PREFIX] == prefix_id and s['subnet'] == subnet):
-                logging.info(f'subnet {subnet}: update with {subnet_item}')
-                # Drop subnet parameters excepts for reservations and options.
-                # This is to ensure we will not inject options defined by Kea
-                # himself (not coming from netbox fields), as some of them
-                # may prevent setting others (like min/max-valid-lifetime wich
-                # would prevent from setting an out-of-bound valid-lifetime).
-                resas = s[RESAS]
-                pools = s[POOLS]
-                s.clear()
-                s.update(subnet_item)
-                s.setdefault(USR_CTX, {})[PREFIX] = prefix_id
-                s.setdefault(RESAS, resas)
-                s.setdefault(POOLS, pools)
-                break
-        else:
-            raise SubnetNotFound(f'key pair id={prefix_id}/subnet="{subnet}"')
 
     @_autocommit
     def set_pool(self, prefix_id, iprange_id, pool_item):
@@ -247,7 +244,7 @@ class DHCP4App:
 
         for s in self.conf[SUBNETS]:
             found = None
-            if s[USR_CTX][PREFIX] == prefix_id:
+            if s[PREFIX] == prefix_id:
                 # Prefix found
                 for i in s[item_list]:
                     if i[USR_CTX][item_key] == item_id:
