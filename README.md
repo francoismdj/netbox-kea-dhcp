@@ -94,7 +94,16 @@ netbox-kea-dhcp --netbox-url http://netbox-host \
 The default mapping between netbox and Kea is:
 
 - prefixes are exported to subnets.
-- IP ranges are exported to pools.
+- IP ranges are exported to pools. Custom status value `dhcp` may have to be
+  created in netbox configuration file ([netbox-community/netbox#8054](https://github.com/netbox-community/netbox/issues/8054)):
+  ```python
+  FIELD_CHOICES = {
+    'ipam.IPRange.status+': (
+        ('dhcp', 'DHCP', 'red'),
+    )
+  }
+  ```
+   
 - IP Addresses are exported to reservations. Hardware address is mapped with IP
   address custom field `dhcp_reservation_hw_address` if it exists and is non
   null, otherwise it is mapped with the MAC address of the assigned object.
