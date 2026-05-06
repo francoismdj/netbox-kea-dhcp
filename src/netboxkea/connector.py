@@ -157,6 +157,11 @@ class Connector:
         for i in self.nb.ip_addresses(virtual_machine_id=id_):
             self.sync_ipaddress(i.id)
 
+    def sync_fullsync(self, id_):
+        # Additional check of id = 0 before syncing
+        if int(id_) == 0:
+            self.sync_all()
+
     def _prefix_to_subnet(self, pref, fullsync=False):
         subnet = _mk_dhcp_item(pref, self.subnet_prefix_map)
         subnet['subnet'] = pref.prefix
