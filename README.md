@@ -81,6 +81,24 @@ Run:
 netbox-kea-dhcp --help
 ```
 
+### A word on Kea and AppArmor
+
+AppArmor may prevent Kea control agent to write to its configuration file
+`/etc/kea/kea-dhcp4.conf`.
+
+The error message is `"Error during write-config: Unable to open file /etc/kea/kea-dhcp4.conf for writing"`
+whereas file permissions are correct.
+
+It has been reported at least on Ubuntu 24.04.
+
+A quick workaround is to disable AppArmor.
+
+A permanent solution would be to fix the denial in AppArmor itself. This is out of the 
+scope of this README but
+[this page](https://www.apparmor.net/monitoring/configure-and-fix-denial/)
+may be a good start.
+
+
 Quick start
 -----------
 
@@ -135,7 +153,7 @@ Sysadmins should set several webhooks with conditions and restricted body
 template, in order to filter events and avoid unecessary network and CPU load.
 
 Below is a recommended webhook set-up. It assumes that DHCP hardware addresses
-are apped with netbox interface MAC addresses. If interfaces are not used
+are mapped with netbox interface MAC addresses. If interfaces are not used
 (i.e. hardware addresses are only mapped with a custom field defined in netbox
 IP addresses), webhooks on (vm) interfaces, (virtual) devices are not needed.
 
